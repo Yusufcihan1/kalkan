@@ -14,7 +14,7 @@ import urllib.request
 import uuid
 
 APP_NAME = "Kalkan"
-VERSION = "1.0.1"
+VERSION = "1.0.2"
 DATA_DIR = os.path.join(os.environ.get("PROGRAMDATA", r"C:\ProgramData"), APP_NAME)
 ENGINE_DIR = os.path.join(DATA_DIR, "motorlar")
 QUAR_DIR = os.path.join(DATA_DIR, "karantina")

@@ -218,7 +218,15 @@ PAGES.durum = async (main) => {
         <label class="sub" for="ask">Mesaj, link ya da ekran görüntüsü yapıştır; Claude ne olduğunu açıklasın.</label>
         <div class="input-row"><input id="ask" type="text" placeholder="Ör. kargo SMS'indeki link"><button class="btn ai solid" id="ask-go">Sor</button></div></section>
     </div>
-    <footer class="engines-foot" id="eng">${engFoot(s)}</footer></div>`;
+    <footer class="engines-foot" id="eng">${engFoot(s)}</footer>
+    <div class="row" style="justify-content:center"><span class="note">Kalkan ${esc(s.version)}</span><button class="btn sm" id="upd-check-home">Güncellemeleri denetle</button></div></div>`;
+  $('#upd-check-home').onclick = async () => {
+    const b = $('#upd-check-home'); b.disabled = true; b.innerHTML = '<span class="spinner"></span>';
+    const r = await act(() => api('update_check'));
+    b.disabled = false; b.textContent = 'Güncellemeleri denetle';
+    if (!r) return;
+    if (r.available) installUpdate(b); else toast(`En son sürümü kullanıyorsun (${r.current}).`);
+  };
   $('#layer-count').textContent = `${Object.values(s.layers).filter(l => l.on).length} katmanın ${Object.keys(s.layers).length}'ü açık`;
   $('#ask-go').onclick = () => { const v = $('#ask').value.trim(); state.ai = { mode: 'dolandirici', text: v }; go('asistan'); };
   $('#ask').onkeydown = e => { if (e.key === 'Enter') $('#ask-go').click(); };
