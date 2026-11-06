@@ -205,6 +205,7 @@ PAGES.durum = async (main) => {
   const open = (sc.open || []).slice(0, 2);
   main.innerHTML = `<div class="page">
     <div id="hero">${heroHTML(s)}</div>
+    ${s.update ? `<div class="banner info row between"><span>Kalkan ${esc(s.update)} hazır (şu an ${esc(s.version)}). Ayarların ve karantina korunur.</span><button class="btn sm primary" data-update="1">Güncelle</button></div>` : ''}
     ${!s.admin ? '<div class="banner warn">Kalkan yönetici yetkisi olmadan çalışıyor: bazı korumalar (DNS filtresi, Defender kuralları, sıkılaştırma) uygulanamaz. Kalkan\'ı kapatıp yeniden aç.</div>' : ''}
     <div id="alerts-wrap">${await alertsHTML()}</div>
     <section class="stack" aria-labelledby="kt"><div class="section-title"><h2 id="kt">Koruma katmanları</h2><span class="sub" id="layer-count"></span></div>
@@ -261,7 +262,16 @@ function bindCommon(root) {
     }
     const al = e.target.closest('[data-alert]');
     if (al) return alertAction(al.dataset.alert, al.dataset.act, al);
+    const up = e.target.closest('[data-update]');
+    if (up) return installUpdate(up);
   };
+}
+async function installUpdate(btn) {
+  if (!await confirmBox('Kalkan güncellensin mi?', 'Yeni sürüm indirilip eski sürümün üzerine kurulur. Ayarların, karantina ve yedek kasası korunur. Kalkan birkaç saniye kapanıp yeniden açılır.', 'Güncelle')) return;
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>'; }
+  const r = await act(() => runJob('update_install', {}, j => { if (btn && j.message) btn.textContent = j.message.replace('İndiriliyor… ', ''); }));
+  if (r) { toast(r.message); if (r.message.includes('kuruluyor')) setTimeout(() => window.close(), 1500); }
+  else if (btn) { btn.disabled = false; btn.textContent = 'Güncelle'; }
 }
 async function alertAction(id, action, btn) {
   if (action === 'explain') return explainJob('alert_explain', { id });
@@ -794,8 +804,15 @@ PAGES.ayarlar = async (main) => {
     <section class="card"><h2>Hariç tutulanlar</h2><span class="sub">Bu klasör ve dosyalara tarama ve anlık koruma dokunmaz. Geliştirme klasörlerin için kullanabilirsin.</span>
       <div>${(st.exclusions || []).map(x => `<div class="list-row"><span class="mono">${esc(x)}</span><button class="btn sm danger-ghost" data-exrm="${esc(x)}">Kaldır</button></div>`).join('') || '<span class="note">Yok</span>'}</div>
       <div class="row"><button class="btn sm" id="ex-folder">Klasör ekle</button><button class="btn sm" id="ex-file">Dosya ekle</button></div></section>
-    <section class="card"><h2>Hakkında</h2><span class="sub">Kalkan ${esc((state.status || {}).version || '')} · Açık kaynak (MIT). Motorlar: Microsoft Defender, ClamAV (GPLv2), YARA-X ve YARA Forge kuralları, abuse.ch, VirusTotal, LOLDrivers, HaGeZi ve malware-filter listeleri, DB-IP.</span></section></div>`;
+    <section class="card"><div class="card-head"><h2>Hakkında</h2><button class="btn sm" id="upd-check">Güncellemeleri denetle</button></div><span class="sub">Kalkan ${esc((state.status || {}).version || '')} · Açık kaynak (MIT). Motorlar: Microsoft Defender, ClamAV (GPLv2), YARA-X ve YARA Forge kuralları, abuse.ch, VirusTotal, LOLDrivers, HaGeZi ve malware-filter listeleri, DB-IP.</span></section></div>`;
   $('#k-set').onclick = async () => { if (await askKey()) go('ayarlar'); };
+  $('#upd-check').onclick = async () => {
+    const b = $('#upd-check'); b.disabled = true; b.innerHTML = '<span class="spinner"></span>';
+    const r = await act(() => api('update_check'));
+    b.disabled = false; b.textContent = 'Güncellemeleri denetle';
+    if (!r) return;
+    if (r.available) installUpdate(b); else toast(`En son sürümü kullanıyorsun (${r.current}).`);
+  };
   const kd = $('#k-del'); if (kd) kd.onclick = async () => { await act(() => runJob('ai_key_set', { key: '' }), 'Anahtar silindi'); go('ayarlar'); };
   const saveSch = patch => act(() => api('settings_set', { patch: { schedule: patch } }), 'Kaydedildi');
   $('#qh').onchange = e => saveSch({ quick_hour: Math.max(0, Math.min(23, +e.target.value || 0)) });

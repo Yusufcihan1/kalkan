@@ -57,12 +57,43 @@ def status_summary():
         "open_warnings": len(open_warn), "score": score, "quiet": core.quiet_now(), "quiet_manual": s.get("quiet", False),
         "last_scan": {k: last.get(k) for k in ("kind", "finished", "files", "cancelled")} | {"findings": len(last.get("findings", []))} if last else None,
         "scan_job": job.id if job else None, "admin": core.is_admin(), "version": core.VERSION,
+        "update": (UPDATE["info"] or {}).get("version"),
         "engines": {k: {"on": v.get("on"), "ok": v.get("installed", True) and v.get("ready", True) and (v.get("key", True))}
                     for k, v in engines.engine_status().items()},
     }
 
 
 DEF_CACHE = {"time": 0, "data": None}
+UPDATE = {"time": 0, "info": None}
+
+
+def check_update(force=False):
+    """Uygulamalarım sitesinde yeni Kalkan sürümü var mı (günde bir kez ya da istenince)."""
+    import guncelle
+    if force or time.time() - UPDATE["time"] > 86400:
+        try:
+            UPDATE["info"] = guncelle.check("kalkan", core.VERSION)
+            UPDATE["time"] = time.time()
+            if UPDATE["info"] and not force:
+                tray_notify("Kalkan güncellemesi hazır", f"Sürüm {UPDATE['info']['version']}. Kalkan'ı açıp Güncelle'ye bas.")
+        except Exception:
+            pass
+    return UPDATE["info"]
+
+
+def install_update(job):
+    import guncelle
+    info = check_update(force=True)
+    if not info:
+        raise UserError("Zaten en son sürümü kullanıyorsun.")
+    path = guncelle.download(info, lambda f: job.update(0.05 + 0.9 * f, f"İndiriliyor… %{int(f * 100)}"))
+    if not core.FROZEN:
+        return {"message": f"Geliştirme sürümü: kurulum indirildi ama çalıştırılmadı ({path})."}
+    # Kurulum Kalkan'ı kapatır (DNS ayarını geri alarak), üzerine kurar; ardından görev ajanı yeniden başlatır.
+    guncelle.install(path, restart=["schtasks", "/run", "/tn", "Kalkan"])
+    core.event("ajan", "bilgi", f"Güncelleme kuruluyor: {info['version']}")
+    threading.Timer(1.0, lambda: (shutdown(), os._exit(0))).start()
+    return {"message": f"Kalkan {info['version']} kuruluyor; birkaç saniye içinde yeniden açılır."}
 
 
 def defender_cached(force=False):
@@ -285,6 +316,8 @@ def build_ops():
         "job_cancel": lambda a: _job_flag(a["id"], "cancelled", True),
         "job_pause": lambda a: _job_flag(a["id"], "paused", bool(a.get("on", True))),
         "jobs": lambda a: [j.public() for j in core.JOBS.values() if j.status == "running"],
+        "update_check": lambda a: {"current": core.VERSION, **(check_update(force=True) or {}), "available": bool(UPDATE["info"])},
+        "update_install": job("update_app", lambda j, a: install_update(j), "Güncelleme indiriliyor"),
     }
     if os.environ.get("KALKAN_GELISTIRME") == "1":
         ops["test_alert"] = lambda a: realtime.raise_alert(
@@ -584,6 +617,8 @@ def scheduler():
                 threading.Thread(target=harden.security_checks, daemon=True).start()
             if now - DEF_CACHE["time"] > 600:
                 threading.Thread(target=defender_cached, daemon=True).start()
+            if now - UPDATE["time"] > 86400 and tick > 4:
+                threading.Thread(target=check_update, daemon=True).start()
             sch = core.settings()["schedule"]
             idle_ok = (not sch.get("idle_only", True)) or core.idle_seconds() > 300
             if not busy and not core.quiet_now():

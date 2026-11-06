@@ -1,6 +1,6 @@
-; Kalkan kurulumu. Program Files'a kurulur (koruma ajanı yönetici yetkisiyle çalışır).
+﻿; Kalkan kurulumu. Program Files'a kurulur (koruma ajanı yönetici yetkisiyle çalışır).
 #define AppName "Kalkan"
-#define AppVersion "1.0.0"
+#define AppVersion "1.0.1"
 
 [Setup]
 AppId={{6E2A1D4B-4C1E-4B9B-9C64-8C4A1A0B7E21}
