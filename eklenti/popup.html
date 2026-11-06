@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<style>
+  body { margin: 0; width: 300px; font-family: Inter, "Segoe UI", system-ui, sans-serif; color: #10201B; }
+  .head { background: #0F1F1A; color: #fff; padding: 14px 16px; display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; }
+  .body { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; line-height: 1.5; }
+  .pill { display: inline-block; padding: 4px 10px; border-radius: 8px; font-weight: 700; font-size: 11px; }
+  .ok { background: #E3F1EC; color: #0B6E5B; } .bad { background: #FDECEA; color: #B42318; } .warn { background: #FDF1E3; color: #9A4B00; }
+  .host { font-family: ui-monospace, Consolas, monospace; word-break: break-all; }
+  .muted { color: #52615C; }
+</style>
+</head>
+<body>
+<div class="head"><img src="icon48.png" width="22" height="22" alt="">Kalkan</div>
+<div class="body">
+  <div id="conn" class="muted">Kalkan'a bağlanılıyor…</div>
+  <div id="site"></div>
+</div>
+<script src="popup.js"></script>
+</body>
+</html>

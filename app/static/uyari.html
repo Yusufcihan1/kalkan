@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Kalkan uyarısı</title>
+<link rel="icon" href="icon.png">
+<link rel="stylesheet" href="style.css">
+<style>
+  body { display: block; overflow: auto; background: #fff; }
+  .wrap { padding: 22px 24px; display: flex; flex-direction: column; gap: 14px; min-height: 100vh; border-top: 5px solid var(--c, #B42318); }
+  .wrap.supheli, .wrap.istenmeyen { --c: #9A4B00; }
+  .wrap.tehdit { --c: #B42318; }
+  .head { display: flex; align-items: center; gap: 12px; }
+  .ico { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: #FDECEA; }
+  .supheli .ico, .istenmeyen .ico { background: #FDF1E3; }
+  h1 { font-family: var(--display); font-size: 19px; font-weight: 700; }
+  p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink2); }
+  .grow { flex: 1; }
+  .acts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .acts .btn.first { flex: 1 1 auto; background: var(--c); border-color: var(--c); color: #fff; }
+</style>
+</head>
+<body>
+<div class="wrap" id="w" role="alertdialog" aria-labelledby="t" aria-describedby="x">
+  <div class="head"><div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" id="ic"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z"/><path d="M12 8v5M12 16v.5"/></svg></div>
+    <div class="stack" style="gap:2px"><h1 id="t">Kalkan</h1><span class="note" id="when"></span></div></div>
+  <p id="x"></p>
+  <div id="res" class="stack" style="gap:10px"></div>
+  <div class="grow"></div>
+  <div class="acts" id="acts"></div>
+</div>
+<script>
+const T = new URLSearchParams(location.search).get('t'), ID = new URLSearchParams(location.search).get('id');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+async function api(op, args) {
+  const r = await fetch('/api/run?t=' + encodeURIComponent(T), { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Token': T }, body: JSON.stringify({ op, args }) });
+  const j = await r.json(); if (!r.ok || j.error) throw new Error(j.error || r.status); return j.result;
+}
+async function wait(id, cb) {
+  for (;;) { const j = await (await fetch('/api/job/' + id + '?t=' + encodeURIComponent(T), { headers: { 'X-Token': T } })).json(); cb && cb(j);
+    if (j.status === 'done') return j.result; if (j.status !== 'running') throw new Error(j.error || 'İptal'); await new Promise(r => setTimeout(r, 600)); }
+}
+(async () => {
+  const a = await api('alert', { id: ID });
+  if (!a.id) { document.getElementById('t').textContent = 'Uyarı kapandı'; return; }
+  document.getElementById('w').classList.add(a.level);
+  document.getElementById('ic').style.color = a.level === 'tehdit' ? '#B42318' : '#9A4B00';
+  document.getElementById('t').textContent = a.title;
+  document.getElementById('x').textContent = a.text;
+  document.getElementById('when').textContent = 'Kalkan · ' + new Date(a.time * 1000).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+  const acts = document.getElementById('acts');
+  if (a.status !== 'open') { acts.innerHTML = `<span class="note">${esc(a.result || 'Yanıtlandı')}</span><button class="btn" onclick="window.close()">Kapat</button>`; return; }
+  acts.innerHTML = a.actions.map(([k, l], i) => k === 'allow' ? `<button class="btn link" data-k="${k}">${esc(l)}</button>`
+    : `<button class="btn ${i === 0 ? 'first' : k === 'explain' ? 'ai' : ''}" data-k="${k}">${esc(l)}</button>`).join('');
+  acts.onclick = async e => {
+    const b = e.target.closest('[data-k]'); if (!b) return;
+    if (b.dataset.k === 'explain') {
+      const res = document.getElementById('res');
+      res.innerHTML = '<div class="row"><span class="spinner"></span><span class="sub" id="m">Claude inceliyor…</span></div>';
+      window.resizeTo(Math.max(window.outerWidth, 520), Math.min(screen.availHeight - 40, 640));
+      try {
+        const { job } = await api('alert_explain', { id: ID });
+        const r = await wait(job, j => { const m = document.getElementById('m'); if (m && j.message) m.textContent = j.message; });
+        res.innerHTML = `<div class="verdict ${r.verdict}"><b>KARAR</b><span>${esc(r.headline)}</span></div><ul class="plain">${r.reasons.map(x => `<li>${esc(x)}</li>`).join('')}</ul><ol class="plain">${r.what_to_do.map(x => `<li>${esc(x)}</li>`).join('')}</ol>`;
+      } catch (err) {
+        res.innerHTML = `<div class="banner ${String(err.message).includes('API_ANAHTARI_YOK') ? 'info' : 'bad'}">${String(err.message).includes('API_ANAHTARI_YOK') ? 'Claude için API anahtarı gerekiyor: Kalkan > Ayarlar > Claude.' : esc(err.message)}</div>`;
+      }
+      return;
+    }
+    acts.querySelectorAll('button').forEach(x => x.disabled = true);
+    try { const r = await api('alert_resolve', { id: ID, action: b.dataset.k }); acts.innerHTML = `<span class="note">${esc(r.message)}</span>`; setTimeout(() => window.close(), 1800); }
+    catch (err) { acts.innerHTML = `<span class="banner bad">${esc(err.message)}</span>`; }
+  };
+})();
+</script>
+</body>
+</html>

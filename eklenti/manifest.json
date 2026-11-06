@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Kalkan Tarayıcı Koruması",
+  "version": "1.0.0",
+  "description": "Kalkan'ın tarayıcı koruması: zararlı ve taklit siteleri, sayfa içi dolandırıcılığı ve izleyicileri engeller.",
+  "icons": {"16": "icon16.png", "48": "icon48.png", "128": "icon128.png"},
+  "action": {"default_popup": "popup.html", "default_icon": {"16": "icon16.png", "48": "icon48.png"}},
+  "background": {"service_worker": "background.js"},
+  "permissions": ["webNavigation", "tabs", "storage", "declarativeNetRequest"],
+  "host_permissions": ["http://127.0.0.1:47615/*"],
+  "content_scripts": [{"matches": ["http://*/*", "https://*/*"], "js": ["content.js"], "run_at": "document_idle"}],
+  "declarative_net_request": {"rule_resources": [{"id": "izleyiciler", "enabled": true, "path": "rules.json"}]},
+  "web_accessible_resources": [{"resources": ["uyari.html"], "matches": ["<all_urls>"]}]
+}

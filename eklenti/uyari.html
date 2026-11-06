@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Kalkan: site engellendi</title>
+<style>
+  :root { --ink: #10201B; --muted: #52615C; --bad: #B42318; --warn: #9A4B00; }
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #F4F6F5;
+    font-family: Inter, "Segoe UI", system-ui, sans-serif; color: var(--ink); }
+  .box { max-width: 560px; margin: 24px; background: #fff; border-radius: 20px; padding: 36px; border-top: 6px solid var(--c, #B42318);
+    box-shadow: 0 10px 40px rgba(15, 31, 26, .08); display: flex; flex-direction: column; gap: 16px; }
+  .box.warn { --c: #9A4B00; }
+  h1 { margin: 0; font-size: 26px; letter-spacing: -.01em; }
+  p { margin: 0; font-size: 15px; line-height: 1.55; color: #33433E; }
+  .host { font-family: ui-monospace, Consolas, monospace; font-size: 14px; background: #F4F6F5; padding: 8px 12px; border-radius: 10px; word-break: break-all; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+  button { min-height: 44px; padding: 0 20px; border-radius: 12px; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; border: 1px solid #D5DDDA; background: #fff; }
+  button.primary { background: var(--c, #B42318); border-color: var(--c, #B42318); color: #fff; }
+  button.link { border: 0; background: none; color: var(--muted); text-decoration: underline; font-weight: 500; font-size: 13px; padding: 0 4px; }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; color: #0B6E5B; font-size: 14px; }
+</style>
+</head>
+<body>
+<main class="box" id="box">
+  <div class="brand"><img src="icon48.png" width="22" height="22" alt="">Kalkan</div>
+  <h1 id="t">Bu site engellendi</h1>
+  <div class="host" id="h"></div>
+  <p id="r"></p>
+  <div class="row"><button class="primary" id="back">Güvenli yere dön</button></div>
+  <button class="link" id="go">Riski anlıyorum, yine de devam et</button>
+</main>
+<script src="uyari.js"></script>
+</body>
+</html>
